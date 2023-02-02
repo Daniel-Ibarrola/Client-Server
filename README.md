@@ -1,4 +1,4 @@
 # Socket
 
-Socket implementation in python and C++.
+Basic client/server using sockets implementation in python and C++.
 
