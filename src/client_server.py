@@ -45,7 +45,7 @@ def client_receive():
 
 
 def server_forward():
-    """ Servers listens for clients and sends data forward.
+    """ Servers listens for clients binding and sends data forward.
     """
     global data_queue
     server_ip = "127.0.0.1"
