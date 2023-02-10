@@ -1,5 +1,9 @@
-# A server that receives data from a client and sends it back
+# A server that receives data from a single client and sends it back
 import socket
+
+
+class EchoServer:
+    pass
 
 
 def main():

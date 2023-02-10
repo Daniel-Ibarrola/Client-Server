@@ -4,7 +4,7 @@ import socket
 
 def main():
     ip = "127.0.0.1"
-    port = 6666
+    port = 12345
 
     cl_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     cl_socket.connect((ip, port))
@@ -12,11 +12,11 @@ def main():
 
     # Send an identification message when connected
     cl_socket.send("Hola\r\n".encode("utf-8"))
-    while True:
+    # while True:
 
-        data = cl_socket.recv(4096)
-        if len(data) > 0:
-            print(f"Server: {data.decode().rstrip()}")
+    data = cl_socket.recv(4096)
+    if len(data) > 0:
+        print(f"Server: {data.decode().rstrip()}")
 
 
 if __name__ == "__main__":
