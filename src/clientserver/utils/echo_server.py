@@ -1,10 +1,12 @@
-# A server that receives data from a single client and sends it back
+
 import socket
 import threading
 from typing import Any, Optional
 
 
 class EchoServer:
+    """A server that receives data from a single client and sends it back.
+    """
 
     def __init__(self, ip: str, port: int,
                  save_data: Optional[bool] = False,
