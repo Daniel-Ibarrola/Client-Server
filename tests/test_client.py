@@ -27,13 +27,17 @@ def test_tcp_client():
     server_thread = threading.Thread(target=server, args=(ip, port), daemon=True)
     server_thread.start()
 
-    client = TCPClient(ip, port)
+    client = TCPClient(ip, port, logging=False)
     client.connect()
-    client.run(wait=0)
+    client.run(wait=0.25)
 
     server_thread.join()
     client.shutdown()
 
-    assert list(client.queue) == ["msg 1", "msg 2", "msg 3"]
+    assert client.data_queue.get().decode() == "msg 1"
+    assert client.data_queue.get().decode() == "msg 2"
+    assert client.data_queue.get().decode() == "msg 3"
+    assert client.data_queue.empty()
+
     assert not SERVER_QUEUE.empty()
-    assert "Hola" in SERVER_QUEUE
+    assert SERVER_QUEUE.get().strip() == "Hola"
