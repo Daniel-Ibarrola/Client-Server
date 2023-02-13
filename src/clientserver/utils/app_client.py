@@ -1,3 +1,4 @@
+# A client that simulates the client on our mobile app. For testing purposes only
 import queue
 import socket
 import time

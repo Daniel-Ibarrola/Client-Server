@@ -1,3 +1,4 @@
+# An echo server for testing purposes
 import socket
 import threading
 from typing import Any, Optional

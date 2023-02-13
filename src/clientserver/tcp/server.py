@@ -1,28 +1,7 @@
-import socket
 from collections import deque
 import socketserver
 import threading
-
-
-def socket_send(sock: socket.socket, data: bytes, msg_len: int):
-    total_sent = 0
-    while total_sent < msg_len:
-        sent = sock.send(data[total_sent:])
-        if sent == 0:
-            raise ConnectionError("Socket disconnected")
-        total_sent += sent
-
-
-def socket_receive(sock: socket.socket, msg_len: int):
-    chunks = []
-    bytes_recv = 0
-    while bytes_recv < msg_len:
-        chk = sock.recv(min(msg_len - bytes_recv, 2048))
-        if chk == b"":
-            raise ConnectionError("Socket disconnected")
-        chunks.append(chk)
-        bytes_recv += len(chk)
-    return b"".join(chunks)
+from clientserver.tcp import socket_send, socket_receive
 
 
 class TCPRequestHandler(socketserver.BaseRequestHandler):
