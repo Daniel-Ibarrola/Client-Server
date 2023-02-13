@@ -1,13 +1,15 @@
 # A client that simulates the client on our mobile app. For testing purposes only
 import queue
 import socket
-import time
 import threading
+
+from clientserver.tcp import socket_receive, socket_send
 
 
 class AppClient:
     """ A client that receives data continuously.
     """
+    MSG_LEN = 1024
 
     def __init__(self, ip: str, port: int, logging: bool = True):
         self.ip = ip
@@ -18,7 +20,6 @@ class AppClient:
         self._stop = False
 
         self._rcv_thread = None
-        self._send_thread = None
 
         self.data_queue = queue.Queue()
 
@@ -33,35 +34,20 @@ class AppClient:
         """
         while not self._stop:
             try:
-                data = self.socket.recv(4096)
-            except ConnectionError:
-                break
-
-            if len(data) > 0:
+                data = socket_receive(self.socket, self.MSG_LEN)
                 self.data_queue.put(data)
-                self._log(data.decode())
-
-    def _send(self, wait: float):
-        """ Send a message every certain time to the server.
-        """
-        message = self.encode_message("Hola")
-        while not self._stop:
-            try:
-                self.socket.send(message)
+                # Send received confirmation message back to server
+                socket_send(self.socket, "RECVD\r\n".encode("utf-8"), 7)
             except ConnectionError:
                 break
-            time.sleep(wait)
 
-    def run(self, wait: float, forever: bool = False) -> None:
+    def run(self, forever: bool = False) -> None:
         """ Start the sending and receiving threads.
         """
         self._rcv_thread = threading.Thread(target=self._receive, daemon=True)
-        self._send_thread = threading.Thread(target=self._send, args=(wait,), daemon=True)
         self._rcv_thread.start()
-        self._send_thread.start()
 
         if forever:
-            self._send_thread.join()
             self._rcv_thread.join()
 
     def shutdown(self) -> None:
@@ -71,7 +57,6 @@ class AppClient:
         self._stop = True
 
         self._rcv_thread.join()
-        self._send_thread.join()
 
         self.socket.close()
         self._log("Client disconnected")

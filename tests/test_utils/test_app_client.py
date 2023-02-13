@@ -3,6 +3,8 @@ import threading
 import socket
 
 from clientserver.utils.app_client import AppClient
+from clientserver.tcp import socket_receive, socket_send
+
 
 SERVER_QUEUE = queue.Queue()
 
@@ -16,28 +18,35 @@ def server(ip, port):
 
     with connection as conn:
         for ii in range(3):
-            message = f"msg {ii + 1}"
-            conn.sendall(message.encode())
-            SERVER_QUEUE.put(conn.recv(2048).decode())
+            message = f"msg {ii + 1}\r\n".encode("utf-8")
+            socket_send(conn, message, 7)
+
+            response = socket_receive(conn, 7)
+            SERVER_QUEUE.put(response)
 
 
-def test_tcp_client():
+def test_app_client():
     ip, port = "localhost", 12345
 
     server_thread = threading.Thread(target=server, args=(ip, port), daemon=True)
     server_thread.start()
 
     client = AppClient(ip, port, logging=False)
+    client.MSG_LEN = 7
     client.connect()
-    client.run(wait=0.25)
+    client.run()
 
     server_thread.join()
     client.shutdown()
 
-    assert client.data_queue.get().decode() == "msg 1"
-    assert client.data_queue.get().decode() == "msg 2"
-    assert client.data_queue.get().decode() == "msg 3"
+    assert client.data_queue.get() == b"msg 1\r\n"
+    assert client.data_queue.get() == b"msg 2\r\n"
+    assert client.data_queue.get() == b"msg 3\r\n"
     assert client.data_queue.empty()
 
     assert not SERVER_QUEUE.empty()
-    assert SERVER_QUEUE.get().strip() == "Hola"
+    assert SERVER_QUEUE.get() == b"RECVD\r\n"
+    assert SERVER_QUEUE.get() == b"RECVD\r\n"
+    assert SERVER_QUEUE.get() == b"RECVD\r\n"
+
+    assert SERVER_QUEUE.empty()
