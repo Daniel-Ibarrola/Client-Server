@@ -2,6 +2,8 @@ import queue
 import threading
 import socket
 
+import pytest
+
 from clientserver import TCPClient
 
 SERVER_QUEUE = queue.Queue()
