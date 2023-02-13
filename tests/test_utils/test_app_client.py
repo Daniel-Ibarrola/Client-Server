@@ -2,9 +2,7 @@ import queue
 import threading
 import socket
 
-import pytest
-
-from clientserver import TCPClient
+from clientserver.utils.app_client import AppClient
 
 SERVER_QUEUE = queue.Queue()
 
@@ -29,7 +27,7 @@ def test_tcp_client():
     server_thread = threading.Thread(target=server, args=(ip, port), daemon=True)
     server_thread.start()
 
-    client = TCPClient(ip, port, logging=False)
+    client = AppClient(ip, port, logging=False)
     client.connect()
     client.run(wait=0.25)
 
