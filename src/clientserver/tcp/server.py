@@ -24,22 +24,17 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
         prev = TCPServer.latest
         while not TCPServer.STOP:
             if TCPServer.latest > prev:
-                try:
-                    self.send_and_receive_confirmation(self.request, TCPServer.buffer[-1])
-                except ConnectionError:
-                    break
+                self.send_and_receive_confirmation(self.request, TCPServer.buffer[-1])
                 prev = TCPServer.latest
+
+        TCPServer.n_clients -= 1
 
     def handle_new_client(self) -> None:
         """ If a new client connects all data in the queue is sent.
         """
+        TCPServer.n_clients += 1
         for data in TCPServer.buffer:
-            try:
-                msg = self.send_and_receive_confirmation(self.request, data)
-                if msg.decode(encoding="utf-8") != "RECVD\r\n":
-                    break
-            except ConnectionError:
-                break
+            self.send_and_receive_confirmation(self.request, data)
 
 
 class TCPServer:
@@ -50,6 +45,11 @@ class TCPServer:
     STOP = False
     latest = None
 
+    # NewMessage = threading.Event()
+    # WaitToBeSent = threading.Barrier()
+
+    n_clients = 0
+
     def __init__(self, ip: str, port: int, buff_size: int = 100):
         self._setup_server(buff_size)
         self._ip = ip
@@ -58,7 +58,10 @@ class TCPServer:
         self._server = socketserver.ThreadingTCPServer(
             (self._ip, self._port), TCPRequestHandler
         )
-        self._server.allow_reuse_address = True
+
+    @property
+    def ip(self) -> str:
+        return self._ip
 
     @property
     def port(self) -> int:
@@ -75,6 +78,7 @@ class TCPServer:
         cls.buffer = deque(maxlen=buff_size)
         cls.STOP = False
         cls.latest = time.time()
+        cls.n_clients = 0
 
     def run(self):
         """ Starts the thread with the server. """

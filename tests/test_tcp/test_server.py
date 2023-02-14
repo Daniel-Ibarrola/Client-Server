@@ -28,20 +28,19 @@ class FakeClient:
         self.thread.start()
 
     def receive(self):
-        while not self.stop:
-            try:
-                data = socket_receive(self.socket, self.msg_len)
-            except ConnectionError:
-                time.sleep(0.1)
-                continue
-            self.responses.append(data)
-            # Confirm that the message arrived
-            socket_send(self.socket, b"RECVD\r\n", self.msg_len)
+        with self.socket:
+            while not self.stop:
+                try:
+                    data = socket_receive(self.socket, self.msg_len)
+                    self.responses.append(data)
+                    # Confirm that the message arrived
+                    socket_send(self.socket, b"RECVD\r\n", self.msg_len)
+                except ConnectionError:
+                    self.stop = True
 
     def shutdown(self):
         self.stop = True
         self.thread.join()
-        self.socket.close()
 
 
 def initialize_server(ip, port):
@@ -57,12 +56,10 @@ def initialize_server(ip, port):
 
 
 def get_server_and_clients(port=2000, n_clients=3):
-    ip, port = "localhost", port
-
-    server = initialize_server(ip, port)
+    server = initialize_server("localhost", port)
     TCPServer.MSG_LEN = 7
 
-    clients = [FakeClient(ip, server.port, server.MSG_LEN) for _ in range(n_clients)]
+    clients = [FakeClient(server.ip, server.port, server.MSG_LEN) for _ in range(n_clients)]
 
     return server, clients
 
@@ -134,3 +131,53 @@ def test_server_sends_when_new_data_arrives():
     expected = [b"Msg 1\r\n", b"Msg 2\r\n"]
     assert clients[0].responses == expected
     assert clients[1].responses == expected
+
+
+def test_client_disconnects_from_server():
+    server, [client] = get_server_and_clients(n_clients=1)
+    with server:
+        server.run()
+        client.start()
+
+        time.sleep(1)
+        client.shutdown()
+        server.shutdown()
+
+    assert len(client.responses) == 0
+
+
+def test_server_keeps_track_of_connected_clients():
+    server, [client] = get_server_and_clients(n_clients=1)
+
+    server.put(b"Msg 1\r\n")
+    server.put(b"Msg 2\r\n")
+    with server:
+        server.run()
+        client.start()
+        time.sleep(1)
+
+        # assert server.n_clients == 1
+
+        new_client = FakeClient(server.ip, server.port, server.MSG_LEN)
+        new_client.start()
+        time.sleep(1)
+
+        # assert server.n_clients == 2
+
+        client.stop = True
+        time.sleep(1)
+
+        # assert server.n_clients == 1
+
+        new_client.stop = True
+        time.sleep(1)
+
+        # assert server.n_clients == 0
+        server.shutdown()
+
+    client.shutdown()
+    new_client.shutdown()
+
+    expected = [b"Msg 1\r\n", b"Msg 2\r\n"]
+    assert client.responses == expected
+    assert new_client.responses == expected
