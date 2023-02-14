@@ -32,7 +32,8 @@ class FakeClient:
             while not self.stop:
                 try:
                     data = socket_receive(self.socket, self.msg_len)
-                    self.responses.append(data)
+                    if data != b"ALIVE\r\n":
+                        self.responses.append(data)
                     # Confirm that the message arrived
                     socket_send(self.socket, b"RECVD\r\n", self.msg_len)
                 except ConnectionError:
@@ -120,10 +121,10 @@ def test_server_sends_when_new_data_arrives():
         start_clients(clients)
 
         server.put(b"Msg 1\r\n")
-        time.sleep(0.2)
+        time.sleep(0.5)
 
         server.put(b"Msg 2\r\n")
-        time.sleep(0.2)
+        time.sleep(0.5)
 
         server.shutdown()
         stop_clients(clients)
@@ -156,23 +157,23 @@ def test_server_keeps_track_of_connected_clients():
         client.start()
         time.sleep(1)
 
-        # assert server.n_clients == 1
+        assert server.n_clients == 1
 
         new_client = FakeClient(server.ip, server.port, server.MSG_LEN)
         new_client.start()
-        time.sleep(1)
+        time.sleep(0.5)
 
-        # assert server.n_clients == 2
+        assert server.n_clients == 2
 
         client.stop = True
-        time.sleep(1)
+        time.sleep(0.5)
 
-        # assert server.n_clients == 1
+        assert server.n_clients == 1
 
         new_client.stop = True
-        time.sleep(1)
+        time.sleep(0.5)
 
-        # assert server.n_clients == 0
+        assert server.n_clients == 0
         server.shutdown()
 
     client.shutdown()

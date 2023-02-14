@@ -26,6 +26,12 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
             if TCPServer.latest > prev:
                 self.send_and_receive_confirmation(self.request, TCPServer.buffer[-1])
                 prev = TCPServer.latest
+            else:
+                try:
+                    self.send_and_receive_confirmation(self.request, b"ALIVE\r\n")
+                    time.sleep(0.2)
+                except ConnectionError:
+                    break
 
         TCPServer.n_clients -= 1
 
@@ -46,7 +52,7 @@ class TCPServer:
     latest = None
 
     # NewMessage = threading.Event()
-    # WaitToBeSent = threading.Barrier()
+    # WaitAllClients = threading.Barrier()
 
     n_clients = 0
 
