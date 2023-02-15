@@ -2,16 +2,23 @@ import time
 from collections import deque
 import socketserver
 import threading
-from clientserver.tcp import socket_send, socket_receive
+from clientserver.tcp.socket_ops import socket_receive
 
 
 class TCPRequestHandler(socketserver.BaseRequestHandler):
     """ Handler for an individual client.
     """
 
+    def client_connected(self) -> bool:
+        try:
+            self.send_and_receive_confirmation(self.request, b"ALIVE\r\n")
+        except ConnectionError:
+            return False
+        return True
+
     @staticmethod
     def send_and_receive_confirmation(socket, data):
-        socket_send(socket, data, TCPServer.MSG_LEN)
+        socket.sendall(data)
         # Client sends a notification that the whole message has been received
         return socket_receive(socket, TCPServer.MSG_LEN)
 
@@ -22,16 +29,10 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
 
         # Send the newest data
         prev = TCPServer.latest
-        while not TCPServer.STOP:
+        while self.client_connected() and not TCPServer.STOP:
             if TCPServer.latest > prev:
                 self.send_and_receive_confirmation(self.request, TCPServer.buffer[-1])
                 prev = TCPServer.latest
-            else:
-                try:
-                    self.send_and_receive_confirmation(self.request, b"ALIVE\r\n")
-                    time.sleep(0.2)
-                except ConnectionError:
-                    break
 
         TCPServer.n_clients -= 1
 

@@ -3,7 +3,7 @@ import threading
 import time
 import pytest
 
-from clientserver.tcp.server import TCPServer, socket_receive, socket_send
+from clientserver.tcp.server import TCPServer, socket_receive
 
 
 class FakeClient:
@@ -35,7 +35,7 @@ class FakeClient:
                     if data != b"ALIVE\r\n":
                         self.responses.append(data)
                     # Confirm that the message arrived
-                    socket_send(self.socket, b"RECVD\r\n", self.msg_len)
+                    self.socket.sendall(b"RECVD\r\n")
                 except ConnectionError:
                     self.stop = True
 

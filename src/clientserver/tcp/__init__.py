@@ -1,2 +1,1 @@
-from .send import socket_send
-from .receive import socket_receive
+from .socket_ops import socket_receive
