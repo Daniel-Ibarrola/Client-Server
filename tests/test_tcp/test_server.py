@@ -49,7 +49,7 @@ def initialize_server(ip, port):
 
     while time.time() - start < 60:
         try:
-            return TCPServer(ip, port, buff_size=5)
+            return TCPServer(ip, port)
         except OSError:
             port += 1
 
@@ -75,45 +75,7 @@ def stop_clients(clients):
         cl.shutdown()
 
 
-def test_server_accepts_and_sends_data_to_multiple_clients():
-    server, clients = get_server_and_clients()
-
-    server.put(b"Msg 1\r\n")
-    server.put(b"Msg 2\r\n")
-    server.put(b"Msg 3\r\n")
-
-    with server:
-        server.run()
-        start_clients(clients)
-
-        time.sleep(0.1)  # wait for all messages to be received
-
-        server.shutdown()
-        stop_clients(clients)
-
-    expected = [b"Msg 1\r\n", b"Msg 2\r\n", b"Msg 3\r\n"]
-    assert clients[0].responses == expected
-    assert clients[1].responses == expected
-    assert clients[2].responses == expected
-
-
-def test_put_server_buff_size_exceeded():
-    server = TCPServer("localhost", 12343, buff_size=2)
-    assert len(server.buffer) == 0
-
-    server.put(b"first")
-    server.put(b"second")
-
-    assert server.buffer[0].decode() == "first"
-    assert server.buffer[1].decode() == "second"
-
-    server.put(b"third")
-
-    assert server.buffer[0].decode() == "second"
-    assert server.buffer[1].decode() == "third"
-
-
-def test_server_sends_when_new_data_arrives():
+def test_server_sends_new_data_when_it_arrives():
     server, clients = get_server_and_clients(port=1233, n_clients=2)
 
     with server:
@@ -134,6 +96,25 @@ def test_server_sends_when_new_data_arrives():
     assert clients[1].responses == expected
 
 
+def test_all_new_data_is_sent():
+    server, clients = get_server_and_clients(port=1233, n_clients=1)
+
+    with server:
+        server.run()
+        start_clients(clients)
+
+        # All data arrives simultaneously
+        server.put(b"Msg 1\r\n")
+        server.put(b"Msg 2\r\n")
+        server.put(b"Msg 3\r\n")
+
+        server.shutdown()
+        stop_clients(clients)
+
+    expected = [b"Msg 1\r\n", b"Msg 2\r\n", b"Msg 3 \r\n"]
+    assert clients[0].responses == expected
+
+
 def test_client_disconnects_from_server():
     server, [client] = get_server_and_clients(n_clients=1)
     with server:
@@ -150,8 +131,6 @@ def test_client_disconnects_from_server():
 def test_server_keeps_track_of_connected_clients():
     server, [client] = get_server_and_clients(n_clients=1)
 
-    server.put(b"Msg 1\r\n")
-    server.put(b"Msg 2\r\n")
     with server:
         server.run()
         client.start()
@@ -173,12 +152,9 @@ def test_server_keeps_track_of_connected_clients():
         new_client.stop = True
         time.sleep(0.5)
 
-        assert server.n_clients == 0
         server.shutdown()
 
     client.shutdown()
     new_client.shutdown()
 
-    expected = [b"Msg 1\r\n", b"Msg 2\r\n"]
-    assert client.responses == expected
-    assert new_client.responses == expected
+    assert server.n_clients == 0

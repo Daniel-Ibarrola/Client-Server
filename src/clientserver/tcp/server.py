@@ -1,8 +1,15 @@
-import time
-from collections import deque
+import queue
 import socketserver
 import threading
+import time
+
 from clientserver.tcp.socket_ops import socket_receive
+
+
+class SnapshotQueue(queue.Queue):
+    def snapshot(self):
+        with self.mutex:
+            return list(self.queue)
 
 
 class TCPRequestHandler(socketserver.BaseRequestHandler):
@@ -23,31 +30,23 @@ class TCPRequestHandler(socketserver.BaseRequestHandler):
         return socket_receive(socket, TCPServer.MSG_LEN)
 
     def handle(self) -> None:
-        """ Send all data from the queue to the client.
+        """ Send incoming data to the client.
         """
-        self.handle_new_client()
+        TCPServer.n_clients += 1
 
-        # Send the newest data
         prev = TCPServer.latest
         while self.client_connected() and not TCPServer.STOP:
             if TCPServer.latest > prev:
-                self.send_and_receive_confirmation(self.request, TCPServer.buffer[-1])
+                self.send_and_receive_confirmation(self.request, TCPServer.buffer.snapshot()[-1])
                 prev = TCPServer.latest
 
         TCPServer.n_clients -= 1
-
-    def handle_new_client(self) -> None:
-        """ If a new client connects all data in the queue is sent.
-        """
-        TCPServer.n_clients += 1
-        for data in TCPServer.buffer:
-            self.send_and_receive_confirmation(self.request, data)
 
 
 class TCPServer:
     """ Server that sends data continuously to multiple clients.
     """
-    buffer = None  # type: deque[bytes]
+    buffer = None  # type: SnapshotQueue
     MSG_LEN = 2048
     STOP = False
     latest = None
@@ -57,8 +56,8 @@ class TCPServer:
 
     n_clients = 0
 
-    def __init__(self, ip: str, port: int, buff_size: int = 100):
-        self._setup_server(buff_size)
+    def __init__(self, ip: str, port: int):
+        self._setup_server()
         self._ip = ip
         self._port = port
 
@@ -78,11 +77,11 @@ class TCPServer:
     def put(cls, data: bytes) -> None:
         """ Put data in the buffer. """
         cls.latest = time.time()
-        cls.buffer.append(data)
+        cls.buffer.put(data)
 
     @classmethod
-    def _setup_server(cls, buff_size):
-        cls.buffer = deque(maxlen=buff_size)
+    def _setup_server(cls):
+        cls.buffer = SnapshotQueue()
         cls.STOP = False
         cls.latest = time.time()
         cls.n_clients = 0

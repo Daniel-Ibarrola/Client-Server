@@ -3,7 +3,7 @@ import queue
 import socket
 import threading
 
-from clientserver.tcp import socket_receive, socket_send
+from clientserver.tcp import socket_receive
 
 
 class AppClient:
@@ -11,13 +11,14 @@ class AppClient:
     """
     MSG_LEN = 1024
 
-    def __init__(self, ip: str, port: int, logging: bool = True):
+    def __init__(self, ip: str, port: int, logging: bool = True, save_data: bool = True):
         self.ip = ip
         self.port = port
         self.socket = None
 
         self._logging = logging
         self._stop = False
+        self._save = save_data
 
         self._rcv_thread = None
 
@@ -34,10 +35,13 @@ class AppClient:
         """
         while not self._stop:
             try:
-                data = socket_receive(self.socket, self.MSG_LEN)
-                self.data_queue.put(data)
+                # data = socket_receive(self.socket, self.MSG_LEN)
+                data = self.socket.recv(1024)
+                self._log(data.decode())
+                if self._save:
+                    self.data_queue.put(data)
                 # Send received confirmation message back to server
-                socket_send(self.socket, "RECVD\r\n".encode("utf-8"), 7)
+                self.socket.sendall("RECVD\r\n".encode("utf-8"))
             except ConnectionError:
                 break
 
@@ -67,6 +71,6 @@ class AppClient:
         msg += "\r\n"
         return msg.encode("utf-8")
 
-    def _log(self, msg):
+    def _log(self, msg: str):
         if self._logging:
             print(msg)

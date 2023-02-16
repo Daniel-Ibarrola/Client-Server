@@ -3,7 +3,7 @@ import threading
 import socket
 
 from clientserver.utils.app_client import AppClient
-from clientserver.tcp import socket_receive, socket_send
+from clientserver.tcp import socket_receive
 
 
 SERVER_QUEUE = queue.Queue()
@@ -19,7 +19,7 @@ def server(ip, port):
     with connection as conn:
         for ii in range(3):
             message = f"msg {ii + 1}\r\n".encode("utf-8")
-            socket_send(conn, message, 7)
+            sock.sendall(message)
 
             response = socket_receive(conn, 7)
             SERVER_QUEUE.put(response)
