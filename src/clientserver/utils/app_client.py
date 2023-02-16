@@ -35,8 +35,8 @@ class AppClient:
         """
         while not self._stop:
             try:
-                # data = socket_receive(self.socket, self.MSG_LEN)
-                data = self.socket.recv(1024)
+                data = socket_receive(self.socket, self.MSG_LEN)
+                # data = self.socket.recv(1024)
                 self._log(data.decode())
                 if self._save:
                     self.data_queue.put(data)
@@ -45,14 +45,11 @@ class AppClient:
             except ConnectionError:
                 break
 
-    def run(self, forever: bool = False) -> None:
+    def run(self, daemon: bool = False) -> None:
         """ Start the sending and receiving threads.
         """
-        self._rcv_thread = threading.Thread(target=self._receive, daemon=True)
+        self._rcv_thread = threading.Thread(target=self._receive, daemon=daemon)
         self._rcv_thread.start()
-
-        if forever:
-            self._rcv_thread.join()
 
     def shutdown(self) -> None:
         """ Stop the threads and close the socket.
@@ -61,8 +58,6 @@ class AppClient:
         self._stop = True
 
         self._rcv_thread.join()
-
-        self.socket.close()
         self._log("Client disconnected")
 
     @staticmethod
