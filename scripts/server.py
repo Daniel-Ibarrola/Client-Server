@@ -11,11 +11,17 @@ STOP = False
 def simulate_data(server: TCPServer):
 
     count = 1
-    time.sleep(1)  # Wait for server to start
+    time.sleep(5)  # Wait for server to start
     while not STOP:
         server.put(f"Msg {count}".encode("utf-8"))
         count += 1
-        time.sleep(5)
+        # time.sleep(2)
+
+        for ii in range(3):
+            server.put(f"Msg {count}".encode("utf-8"))
+            count += 1
+
+        # time.sleep(2)
 
 
 def main():

@@ -4,8 +4,6 @@ import struct
 import threading
 import time
 
-from clientserver.tcp.socket_ops import socket_receive
-
 
 class TCPServer:
     """ Server that sends data continuously to multiple clients.
@@ -19,10 +17,11 @@ class TCPServer:
 
         self.socket = self._start_socket(self._ip, self._port)
         self._clients = set()  # type: set[socket.socket]
+
         self._queue = queue.Queue()  # type: queue.Queue[bytes]
+        self._queue_timeout = None
 
         self.STOP = False
-
         self._accept_thread = None
         self._send_thread = None
 
@@ -41,14 +40,18 @@ class TCPServer:
     def put(self, data: bytes) -> None:
         """ Put data in the server queue.
         """
-        self._queue.put(data)
+        self._queue.put(data, timeout=self._queue_timeout)
 
-    def set_timeout(self, timeout: float):
+    def set_timeout(self, timeout: float) -> None:
         """ Set the timeout for sending and receiving messages.
         """
         timeval = struct.pack("ll", timeout, 0)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVTIMEO, timeval)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDTIMEO, timeval)
+
+    def set_queue_timeout(self, timeout: float) -> None:
+        """ Set the timeout for put and get in the server's queue"""
+        self._queue_timeout = timeout
 
     @staticmethod
     def _start_socket(ip: str, port: int) -> socket.socket:
@@ -76,8 +79,8 @@ class TCPServer:
         purge = set()
 
         while not self.STOP:
-            if not self._queue.empty() and len(self._clients) > 0:
-                data = self._queue.get()
+            if len(self._clients) > 0:
+                data = self._queue.get(timeout=self._queue_timeout)
                 self._queue.task_done()
                 for conn in self._clients:
                     try:
@@ -88,7 +91,7 @@ class TCPServer:
 
                 self._purge_connections(purge)
 
-            # time.sleep(2)
+            time.sleep(2)
 
     def run(self, daemon: bool = True) -> None:
         """ Start the threads to accept new connections and send data to them.

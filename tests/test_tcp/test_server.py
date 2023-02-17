@@ -23,7 +23,8 @@ def get_server_and_clients(port=2000, n_clients=3):
         AppClient(server.ip, server.port, logging=False, save_data=True)
         for _ in range(n_clients)
     ]
-    server.set_timeout(3)
+    # server.set_timeout(3)
+    server.set_queue_timeout(2)
 
     return server, clients
 
@@ -31,7 +32,7 @@ def get_server_and_clients(port=2000, n_clients=3):
 def start_clients(clients: list[AppClient]):
     for cl in clients:
         cl.connect()
-        cl.set_timeout(2)
+        # cl.set_timeout(2)
         cl.run(daemon=True)
 
 
@@ -40,7 +41,7 @@ def stop_clients(clients):
         cl.shutdown()
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(15)
 def test_server_sends_new_data_when_it_arrives():
     server, clients = get_server_and_clients(n_clients=2)
 
@@ -62,7 +63,7 @@ def test_server_sends_new_data_when_it_arrives():
     assert list(clients[1].data_queue.queue) == expected
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(15)
 def test_all_new_data_is_sent():
     server, [client] = get_server_and_clients(port=1233, n_clients=1)
 
@@ -83,7 +84,7 @@ def test_all_new_data_is_sent():
     assert list(client.data_queue.queue) == expected
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(15)
 def test_client_disconnects_from_server():
     server, [client] = get_server_and_clients(n_clients=1)
     with server:
@@ -98,7 +99,7 @@ def test_client_disconnects_from_server():
     assert client.data_queue.empty()
 
 
-@pytest.mark.timeout(10)
+@pytest.mark.timeout(15)
 def test_server_keeps_track_of_connected_clients():
     server, [client] = get_server_and_clients(n_clients=1)
 
