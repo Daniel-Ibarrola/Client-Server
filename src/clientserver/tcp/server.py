@@ -64,14 +64,14 @@ class TCPServer:
         """ Remove disconnected clients. """
         for client in purge:
             self._clients.remove(client)
-            self._log("Client disconnected")
+            self._log("TCPServer: client disconnected")
         purge.clear()
 
     def _accept_connection(self) -> None:
         """ Accept new clients. """
         while not self.STOP:
             conn, address = self.socket.accept()
-            self._log(f"Connection accepted from {address}")
+            self._log(f"TCPServer: Connection accepted from {address}")
             self._clients.add(conn)
 
     def _send_data(self) -> None:

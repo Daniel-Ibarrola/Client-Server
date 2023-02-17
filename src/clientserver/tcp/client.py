@@ -28,7 +28,7 @@ class AbstractClient(abc.ABC):
         """ Connect to the server. """
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._socket.connect((self.ip, self.port))
-        self._log(f"Client connected to {(self.ip, self.port)}")
+        self._log(f"{self.__class__.__name__}: connected to {(self.ip, self.port)}")
 
     def set_timeout(self, timeout: float):
         """ Set a timeout for sending and receiving messages.
@@ -98,8 +98,11 @@ class TCPClient(AbstractClient):
     def shutdown(self) -> None:
         """ Stop all the threads. """
         self._stop = True
-        self._log("Stopping client")
+        self._log("TCPClient: stopping")
 
+        self.join()
+        self._log("TCPClient: disconnected")
+
+    def join(self):
         self._rcv_thread.join()
         self._send_thread.join()
-        self._log("Client disconnected")
